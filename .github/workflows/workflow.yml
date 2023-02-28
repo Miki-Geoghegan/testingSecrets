@@ -33,7 +33,7 @@ jobs:
         id: 'list-of-commits'
         uses: tim-actions/get-pr-commits@v1.2.0
         with:
-          token: ${{ secrets[format('{0}_PAT', github.actor)] }}
+          token: ${{ secrets[format('{0}_PAT', replace(github.actor), '-', '')] }}
 
       - name: Check pull request commits
         uses: tim-actions/commit-message-checker-with-regex@v0.3.1
