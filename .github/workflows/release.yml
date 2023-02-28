@@ -1,0 +1,82 @@
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: Type of bump *
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  release:
+    name: Bump and Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: 'master'
+          token: ${{ secrets[format('{0}_PAT', github.actor)] }}
+
+      - name: Import GPG config
+        uses: crazy-max/ghaction-import-gpg@v5
+        with:
+          gpg_private_key: ${{ secrets[format('{0}_GPG_PRIVATE_KEY', github.actor)] }}
+          passphrase: ${{ secrets[format('{0}_GPG_PASS_PHRASE', github.actor)] }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Set git info
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: current
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm install --global yarn json@11.0.0
+          wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod a+x /usr/local/bin/yq
+
+      - name: Versioning
+        run: |
+          yarn config set version-sign-git-tag true
+          yarn version --${{ inputs.version_type }}
+          git verify-commit HEAD
+          package_version=$(cat ./package.json | grep -m 1 version | sed 's/[^0-9.]//g')
+          echo "package_version=$package_version" >> $GITHUB_ENV
+
+      - name: Push
+        uses: ad-m/github-push-action@master
+        with:
+          branch: master
+          tags: true
+          github_token: ${{ secrets[format('{0}_PAT', github.actor)] }}
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets[format('{0}_PAT', github.actor)] }}
+          tag_name: ${{ env.package_version }}
+          generate_release_notes: true
+
+      # - name: Notify
+      #   uses: rtCamp/action-slack-notify@v2
+      #   env:
+      #     SLACK_CHANNEL: frontend
+      #     SLACK_COLOR: green
+      #     SLACK_USERNAME: Tailor
+      #     SLACK_WEBHOOK: ${{ secrets.SLACK_TOKEN }}
+      #     SLACK_TITLE: Release
+      #     SLACK_MESSAGE: 'Version ${{ env.package_version }} has been just released'
+      #     MSG_MINIMAL: true

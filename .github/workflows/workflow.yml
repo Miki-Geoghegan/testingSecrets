@@ -1,0 +1,43 @@
+name: Workflow
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  branch:
+    name: Branch check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check branch name
+        uses: deepakputhraya/action-branch-name@v1.0.0
+        with:
+          regex: ^[a-z]{0,20}\/(internal|fix|hotfix|[a-zA-Z]{0,4}\-\d+)[\-\w+]{1,}
+
+  pullrequest:
+    name: Pull request check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check pull request title
+        uses: deepakputhraya/action-pr-title@v1.0.2
+        with:
+          regex: ^\[(INTERNAL|FIX|HOTFIX|[A-Z]{0,4}\-\d+)\][\s+\w]{1,}
+
+  commits:
+    name: Commits check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get pull request commits
+        id: 'list-of-commits'
+        uses: tim-actions/get-pr-commits@v1.2.0
+        with:
+          token: ${{ secrets[format('{0}_PAT', github.actor)] }}
+
+      - name: Check pull request commits
+        uses: tim-actions/commit-message-checker-with-regex@v0.3.1
+        with:
+          commits: ${{ steps.list-of-commits.outputs.commits }}
+          pattern: '\[(INTERNAL|FIX|HOTFIX|[A-Z]{0,4}\-\d+)\][\s+\w]{1,}'
+          error: 'Commit message does not match the rules'

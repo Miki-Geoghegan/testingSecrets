@@ -1,0 +1,17 @@
+changelog:
+  categories:
+    - title: Changes
+      labels:
+        - '*'
+      exclude:
+        labels:
+          - hotfix
+          - fix
+          - docs
+    - title: Fixes
+      labels:
+        - hotfix
+        - fix
+    - title: Documentation
+      labels:
+        - docs
